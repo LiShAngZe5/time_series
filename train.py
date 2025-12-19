@@ -24,9 +24,7 @@ import random
 from torchvision import transforms
 warnings.filterwarnings('ignore')
 
-
 class Config:
-    """改进的配置"""
     data_dir = '/data/iamlisz/time/Cricket-train/lineplot_dataset'   #图像数据集路径
     num_classes = 12                                                 #类别数需要根据画图代码的输出修改
     model_name = "/data/iamlisz/time/Qwen2.5-VL-7B-Instruct/Qwen2.5-VL-7B-Instruct"  #模型位置
@@ -58,7 +56,7 @@ class Config:
     num_epochs = 80
     warmup_ratio = 0.15  
     weight_decay = 0.04
-    max_grad_norm = 1.0  # 0.5 → 1.0
+    max_grad_norm = 1.0  
     
     image_size = 448
     max_pixels = 448 * 448
@@ -180,7 +178,6 @@ class PatchTSTEncoder(nn.Module):
 
 
 class CrossAttentionFusion(nn.Module):
-    """双向Cross-Attention融合模块"""
     
     def __init__(self, visual_dim, temporal_dim, fusion_dim=512, n_heads=8, dropout=0.2):
         super().__init__()
@@ -202,7 +199,6 @@ class CrossAttentionFusion(nn.Module):
             batch_first=True
         )
         
-        # Temporal → Visual 
         self.t2v_attention = nn.MultiheadAttention(
             embed_dim=fusion_dim,
             num_heads=n_heads,
@@ -268,9 +264,7 @@ class CrossAttentionFusion(nn.Module):
 
 
 class AdaptiveGatedFusion(nn.Module):
-    """
-    自适应门控融合
-    """
+
     def __init__(self, fusion_dim=512, dropout=0.1):
         super().__init__()
         self.fusion_dim = fusion_dim
@@ -325,7 +319,7 @@ class AdaptiveGatedFusion(nn.Module):
 
         gate_input = torch.cat([V_global, T_global], dim=-1)  # [B, 2*D]
         
-        # 计算样本级权重
+        
         sample_weights = self.sample_gate(gate_input)  # [B, 2]
         w_v = sample_weights[:, 0:1].unsqueeze(1)  # [B, 1, 1]
         w_t = sample_weights[:, 1:2].unsqueeze(1)  # [B, 1, 1]
@@ -337,10 +331,10 @@ class AdaptiveGatedFusion(nn.Module):
 
         V_weighted = visual_features * w_v * feature_mask
         
-        # 时序特征：样本权重 × 特征门控
+        
         T_weighted = temporal_features * w_t * feature_mask
         
-        # 拼接所有token
+       
         fused = torch.cat([V_weighted, T_weighted], dim=1)  # [B, Nv+Nt, D]
         
 
@@ -355,7 +349,6 @@ class AdaptiveGatedFusion(nn.Module):
     
 
 class SimpleFusionClassifier(nn.Module):
-    """用于融合特征的简单分类头"""
     
     def __init__(self, hidden_size, num_classes):
         super().__init__()
@@ -402,11 +395,6 @@ class SimpleFusionClassifier(nn.Module):
         
         logits = self.classifier(pooled)
         return logits
-
-
-
-
-
 
 class QwenVLDataset(Dataset):
     
@@ -485,7 +473,7 @@ class QwenVLDataset(Dataset):
             print(f"加载时序数据: {self.timeseries.shape}")
         else:
             self.timeseries = None
-            print("未提供时序数据路径，仅使用视觉特征")
+            print("仅使用视觉特征")
 
 
 
@@ -528,7 +516,7 @@ class QwenVLDataset(Dataset):
         
         return result
     def _load_single_permutation(self, perm_idx=0):
-        """新增：只加载一个排列（用于验证/测试集）"""
+        """只加载一个排列（用于验证/测试集）"""
         perm_dir = f'perm_{perm_idx}'
         metadata_path = os.path.join(self.data_dir, self.split, perm_dir, 'metadata.npy')
         
@@ -543,7 +531,7 @@ class QwenVLDataset(Dataset):
             meta['permutation_idx'] = perm_idx
             meta['original_sample_idx'] = original_idx
         
-        print(f"   └─ 加载 {perm_dir}: {len(metadata)} 样本")
+        print(f"   加载 {perm_dir}: {len(metadata)} 样本")
         
         return list(metadata)
     
@@ -567,10 +555,8 @@ class QwenVLDataset(Dataset):
             if os.path.exists(metadata_path):
                 perm_metadata = np.load(metadata_path, allow_pickle=True)
                 
-                # 提取排列索引
                 perm_idx = int(perm_dir.split('_')[1])
-                
-                # 为每个metadata添加排列信息，方便追踪
+                             
                 for original_idx, meta in enumerate(perm_metadata):
                     meta_copy = dict(meta)
                     meta_copy['permutation_dir'] = perm_dir
@@ -598,7 +584,6 @@ class QwenVLDataset(Dataset):
         return len(self.metadata)
     
     def _get_image_path(self, meta):
-        """获取正确的图像路径 - 支持排列增强"""
         original_path = meta['image_path']
         cleaned_path = original_path.replace('\\', '/')
         
@@ -616,8 +601,6 @@ class QwenVLDataset(Dataset):
             if cleaned_path.startswith(prefix):
                 cleaned_path = cleaned_path[len(prefix):]
                 break
-        
-        # 🔥 处理排列增强的路径
         if self.is_permuted and 'permutation_dir' in meta:
             # 路径格式: split/perm_X/sample_XXXX.png
             perm_dir = meta['permutation_dir']
@@ -633,14 +616,7 @@ class QwenVLDataset(Dataset):
         
         return final_path
     
-
-
-
-
-
-
 class Qwen2VLClassifier(nn.Module):
-
     
     def __init__(self, 
                 model_name=Config.model_name, 
@@ -685,7 +661,6 @@ class Qwen2VLClassifier(nn.Module):
             self.model.gradient_checkpointing_enable()
 
         
-   
         if Config.use_lora:
             self.setup_lora()
             if Config.freeze_backbone:
@@ -695,8 +670,6 @@ class Qwen2VLClassifier(nn.Module):
         elif Config.freeze_backbone:
             for param in self.model.parameters():
                 param.requires_grad = False
-
-        
 
         self.use_timeseries = use_timeseries
         if use_timeseries and timeseries_config:
@@ -709,7 +682,6 @@ class Qwen2VLClassifier(nn.Module):
                 n_heads=timeseries_config.get('n_heads', 8),
                 num_layers=timeseries_config.get('num_layers', 3)
             ).to(Config.device)
-            
             
             visual_hidden_size = self.model.config.hidden_size
             temporal_hidden_size = timeseries_config.get('d_model', 128)
@@ -731,8 +703,8 @@ class Qwen2VLClassifier(nn.Module):
                 num_classes=num_classes
             ).to(Config.device)
             
-            print(f"     - 序列长度: {timeseries_config['seq_len']}")
-            print(f"     - 特征数: {timeseries_config['num_features']}")
+            print(f"     序列长度: {timeseries_config['seq_len']}")
+            print(f"     特征数: {timeseries_config['num_features']}")
         
         self.num_classes = num_classes
         self._print_params_info()
@@ -765,8 +737,8 @@ class Qwen2VLClassifier(nn.Module):
         print(f"   总参数: {total_params:,}")
         print(f"   可训练: {trainable_params:,} ({100*trainable_params/total_params:.2f}%)")
         if Config.use_lora:
-            print(f"   ├─ LoRA: {lora_params:,}")
-        print(f"   └─ 分类头: {classifier_params:,}")
+            print(f"   LoRA: {lora_params:,}")
+        print(f"   分类头: {classifier_params:,}")
     
     def forward(self, batch_images, batch_timeseries=None):
         """
@@ -818,8 +790,6 @@ class Qwen2VLClassifier(nn.Module):
             
             combined_features = gated_features
             # [B, Nv+Nt, D_fusion]
-            
-            # 展平用于分类
             combined_features = combined_features.reshape(
                 batch_size * (patches_per_image + temporal_features.shape[1]),
                 -1
@@ -981,13 +951,7 @@ class Qwen2VLTrainer:
         
         trainable_param_names = [n for n, p in self.model.named_parameters() if p.requires_grad]
         missing_params = set(trainable_param_names) - all_param_names
-        if missing_params:
-            print(f"  以下参数未包含：")
-            for name in list(missing_params)[:5]:
-                print(f"      - {name}")
-            if len(missing_params) > 5:
-                print(f"      ... 还有{len(missing_params)-5}个参数")
-        
+
 
         self.optimizer = optim.AdamW(
             param_groups,
@@ -1164,7 +1128,6 @@ class Qwen2VLTrainer:
         return best_val_acc
     
     def test(self):
-        print("\n开始模型测试...")
         torch.cuda.empty_cache()
         
         checkpoint = torch.load(
@@ -1275,7 +1238,7 @@ def main():
         model = Qwen2VLClassifier(
             model_name=Config.model_name,
             num_classes=Config.num_classes,
-            use_timeseries=True,  # 启用时序特征
+            use_timeseries=True,  
             timeseries_config=timeseries_config
         )
         
@@ -1307,8 +1270,8 @@ def main():
         print("数据集统计:")
 
         print(f"训练集: {len(train_dataset)} 图像")
-        print(f"验证集: {len(val_dataset)} 图像 (独立样本)")
-        print(f"测试集: {len(test_dataset)} 图像 (独立样本)")
+        print(f"验证集: {len(val_dataset)} 图像 ")
+        print(f"测试集: {len(test_dataset)} 图像 ")
 
         
 
@@ -1365,5 +1328,6 @@ if __name__ == "__main__":
 
 
     
+
 
     
