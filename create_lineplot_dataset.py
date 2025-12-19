@@ -67,14 +67,6 @@ class CANLoader(Dataset):
     def __len__(self):
         return len(self.y)
     
-
-
-
-
-
-
-
-
 class Config:
     def __init__(self):
         self.seq_len =1197     #序列长度
@@ -88,15 +80,7 @@ class Config:
 configs = Config()
 times_block = TimesNet.TimesBlock(configs)
 
-
-
-
 feature_representations = []
-
-
-
-
-
 
 
 
@@ -112,20 +96,15 @@ def generate_distinct_colors(num_colors, seed=42, max_brightness=0.85, min_brigh
 
     import colorsys
     
-    feature_colors = []
-    
+    feature_colors = [] 
     # 在色相上均匀分布，从0到1（不包括1，避免首尾颜色相同）
     for i in range(num_colors):
         hue = i / num_colors  
         saturation = 0.85     
         value = 0.85         
-        
-        
         r, g, b = colorsys.hsv_to_rgb(hue, saturation, value)
         color = (r, g, b)
-        
         brightness = calculate_brightness(color)
-        
         
         if brightness > max_brightness or brightness < min_brightness:
             if brightness > max_brightness:
@@ -135,30 +114,22 @@ def generate_distinct_colors(num_colors, seed=42, max_brightness=0.85, min_brigh
             
             r, g, b = colorsys.hsv_to_rgb(hue, saturation, value)
             color = (r, g, b)
-        
         feature_colors.append(color)
     
-    
     return feature_colors
-
-
+    
 def create_dataset_with_permutations(args, output_base_dir="./lineplot_dataset", 
                                      num_permutations=5):
 
-    
-    # 获取特征数量
     sample_data = CANLoader(args, r"/data/iamlisz/time/UEA", flag='train')
     num_features = sample_data.X.shape[2]
     
-    #颜色生成函数
-
     feature_colors = generate_distinct_colors(
         num_colors=num_features, 
         seed=42,
         max_brightness=0.85,  # 避免过亮（接近白色）
         min_brightness=0.15   # 避免过暗（不易看清）
     )
-    
     fixed_color_mapping = {i: feature_colors[i] for i in range(num_features)}
     
     print("   特征颜色映射:")
@@ -187,8 +158,6 @@ def create_dataset_with_permutations(args, output_base_dir="./lineplot_dataset",
         np.random.shuffle(perm)
         selected_permutations.append(perm)
     
-
-    
     all_metadata = {}
     
     for split_name in ['train', 'val', 'test']:
@@ -198,11 +167,9 @@ def create_dataset_with_permutations(args, output_base_dir="./lineplot_dataset",
         num_classes = len(np.unique(labels))
         print(f"\n{split_name} 集类别数: {num_classes}")
         split_metadata = []
-        
         for perm_idx, permutation in enumerate(selected_permutations):
             perm_output_dir = os.path.join(output_base_dir, split_name, f"perm_{perm_idx}")
-            
-            print(f"\n处理 {split_name} 集，排列 {perm_idx}: {permutation}")
+            print(f"\n{split_name} 集，排列 {perm_idx}: {permutation}")
             
             metadata = plot_data(
                 data, 
@@ -235,19 +202,13 @@ def create_dataset_with_permutations(args, output_base_dir="./lineplot_dataset",
     with open(os.path.join(output_base_dir, 'dataset_info.json'), 'w') as f:
         json.dump(dataset_info, f, indent=2)
     
-
-    
     return all_metadata, dataset_info
-
-
 
 def plot_data(tensor_data, labels, save_dir="./timeseries_images", 
               outlier_method=None, interpolation=True, 
               color_mapping=None, grid_layout=configs.grid,
               linestyle='-', linewidth=1.0, marker='*', markersize=1.5, feature_permutation=None):
 
-    
-    # 数据转换
     if isinstance(tensor_data, torch.Tensor):
         data = tensor_data.detach().cpu().numpy()
     else:
@@ -269,7 +230,6 @@ def plot_data(tensor_data, labels, save_dir="./timeseries_images",
         color_mapping = {i: feature_colors[i] for i in range(num_features)}
     
     # 计算每个特征的数值范围（考虑异常值）
-    print("计算特征数值范围...")
     feature_ranges = []
     
     for feat_idx in range(num_features):
@@ -280,7 +240,6 @@ def plot_data(tensor_data, labels, save_dir="./timeseries_images",
             feature_ranges.append([0, 1])
             continue
             
-        # 根据异常值处理方法调整范围
         if outlier_method == "iqr":
             q1 = np.percentile(valid_data, 25)
             q3 = np.percentile(valid_data, 75)
@@ -302,18 +261,13 @@ def plot_data(tensor_data, labels, save_dir="./timeseries_images",
             lower_bound = np.min(valid_data)
             upper_bound = np.max(valid_data)
         
-        # 添加一些填充
         padding = (upper_bound - lower_bound) * 0.05
         feature_ranges.append([lower_bound - padding, upper_bound + padding])
-    
-
-    
 
     metadata_list = []
     grid_height, grid_width = grid_layout
     
     for sample_idx in tqdm(range(num_samples), desc="生成图像"):
-        # 设置图像参数
         plt.figure(figsize=(4.48, 4.48), dpi=100)  
         sample_data = data[sample_idx]  # (时间步长, 特征数)
         
@@ -336,7 +290,6 @@ def plot_data(tensor_data, labels, save_dir="./timeseries_images",
                 # 将缺失值和异常值设为NaN
                 invalid_mask = (np.isnan(values)) | (values == 0) | (values < feature_ranges[original_feat_idx][0]) | (values > feature_ranges[original_feat_idx][1])
                 values[invalid_mask] = np.nan
-            
             # 绘制线图
             plt.plot(time_steps, values, 
                     color=color_mapping[original_feat_idx],
@@ -344,7 +297,6 @@ def plot_data(tensor_data, labels, save_dir="./timeseries_images",
                     linewidth=linewidth,
                     marker=marker,
                     markersize=markersize)
-            
             # 设置坐标轴
             plt.xlim(0, num_timesteps-1)
             plt.ylim(feature_ranges[original_feat_idx])
@@ -355,7 +307,6 @@ def plot_data(tensor_data, labels, save_dir="./timeseries_images",
         plt.subplots_adjust(top=1, bottom=0, right=1, left=0, hspace=0, wspace=0)
         plt.margins(0, 0)
         
-        # 保存图像
         img_path = os.path.join(save_dir, f"sample_{sample_idx:04d}.png")
         plt.savefig(img_path, pad_inches=0)
         plt.close()
@@ -373,9 +324,7 @@ def plot_data(tensor_data, labels, save_dir="./timeseries_images",
             "color_mapping": color_mapping
         }
         metadata_list.append(metadata)
-    
 
-    
     # 保存元数据到文件
     metadata_path = os.path.join(save_dir, "metadata.npy")
     np.save(metadata_path, metadata_list)
@@ -383,7 +332,6 @@ def plot_data(tensor_data, labels, save_dir="./timeseries_images",
     # 保存颜色映射到JSON文件
     color_mapping_path = os.path.join(save_dir, "color_mapping.json")
     with open(color_mapping_path, 'w') as f:
-        # 将元组颜色转换为列表以便JSON序列化
         json_ready_mapping = {k: list(v) for k, v in color_mapping.items()}
         json.dump(json_ready_mapping, f)
     
@@ -394,4 +342,5 @@ def plot_data(tensor_data, labels, save_dir="./timeseries_images",
 
 if __name__ == "__main__":
     create_dataset_with_permutations(args, output_base_dir="./lineplot_dataset_augmented_cri", 
+
                                     num_permutations=5)
