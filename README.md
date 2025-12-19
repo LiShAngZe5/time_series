@@ -18,7 +18,7 @@
     1.class Config:
       data_dir = '/data/iamlisz/time/Cricket-train/lineplot_dataset'   图像数据集路径
       num_classes = 12                                                 类别数需要根据画图代码的输出修改
-      model_name = "/data/iamlisz/time/Qwen2.5-VL-7B-Instruct/Qwen2.5-VL-7B-Instruct"  #模型位置
+      model_name = "/data/iamlisz/time/Qwen2.5-VL-7B-Instruct/Qwen2.5-VL-7B-Instruct"  模型位置
   
       seq_len =1197   根据数据集填写时间步
   
