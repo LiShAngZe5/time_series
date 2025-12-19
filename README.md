@@ -3,7 +3,7 @@
     1.args.model_id = "Cricket" 数据集名称更换
     2.class Config:
       def __init__(self):
-          self.seq_len =1197     序列长度
+          self.seq_len =1197     时间步
           self.pred_len = 0      
           self.top_k = 2         
           self.d_model =6        特征数量
