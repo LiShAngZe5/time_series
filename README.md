@@ -16,18 +16,18 @@
 
 训练代码里需要调整的
     1.class Config:
-      data_dir = '/data/iamlisz/time/Cricket-train/lineplot_dataset'   #图像数据集路径
-      num_classes = 12                                                 #类别数需要根据画图代码的输出修改
+      data_dir = '/data/iamlisz/time/Cricket-train/lineplot_dataset'   图像数据集路径
+      num_classes = 12                                                 类别数需要根据画图代码的输出修改
       model_name = "/data/iamlisz/time/Qwen2.5-VL-7B-Instruct/Qwen2.5-VL-7B-Instruct"  #模型位置
   
-      seq_len =1197   #根据数据集填写时间步
+      seq_len =1197   根据数据集填写时间步
   
-      num_features = 6     #根据数据集填写特征数
+      num_features = 6    根据数据集填写特征数
 
     2.main函数里
       timeseries_config = {
-          'seq_len':1197,        # 根据你的数据调整
-          'num_features':6,    # 根据你的数据调整
+          'seq_len':1197,        根据你的数据调整
+          'num_features':6,     根据你的数据调整
           'patch_len': 128,
           'stride':64,
           'd_model': 128,
@@ -35,5 +35,5 @@
           'num_layers': 3
       }
       
-      timeseries_data_path = '/data/iamlisz/time/UEA/Cricket.npy'  # 修改为UEA数据集路径
+      timeseries_data_path = '/data/iamlisz/time/UEA/Cricket.npy'  修改为UEA数据集路径
     
